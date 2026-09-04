@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Mutual Non-Disclosure Agreement (Standard Terms)",
+    "description": "Common Paper's standard mutual NDA terms, allowing two parties to exchange confidential information under agreed protections, exceptions, and return/destruction obligations.",
+    "filename": "mutual-nda.md"
+  },
+  {
+    "name": "Mutual Non-Disclosure Agreement (Cover Page)",
+    "description": "The cover page used to execute the Common Paper Mutual NDA, capturing purpose, effective date, term, and governing law details that incorporate the Standard Terms by reference.",
+    "filename": "mutual-nda-coverpage.md"
+  },
+  {
+    "name": "Cloud Service Agreement",
+    "description": "Common Paper's standard terms for a SaaS/cloud service provider-customer relationship, covering access and use, payment, term and termination, warranties, liability, indemnification, and confidentiality.",
+    "filename": "cloud-service-agreement.md"
+  },
+  {
+    "name": "Design Partner Agreement",
+    "description": "Common Paper's standard terms for giving an early-access design partner use of a product in exchange for feedback and participation in a product development program.",
+    "filename": "design-partner-agreement.md"
+  },
+  {
+    "name": "Service Level Agreement",
+    "description": "Common Paper's standard terms defining uptime targets, support response times, service credit remedies, and termination rights for cloud service performance commitments.",
+    "filename": "service-level-agreement.md"
+  },
+  {
+    "name": "Professional Services Agreement",
+    "description": "Common Paper's standard terms for a provider performing professional services under one or more statements of work, covering deliverables, IP assignment, payment, and warranties.",
+    "filename": "professional-services-agreement.md"
+  },
+  {
+    "name": "Data Processing Agreement",
+    "description": "Common Paper's standard terms governing the processing of personal data between a controller/processor and processor/subprocessor, including international transfer mechanisms (EEA SCCs, UK Addendum) and security incident response.",
+    "filename": "data-processing-agreement.md"
+  },
+  {
+    "name": "Software License Agreement",
+    "description": "Common Paper's standard terms for an on-premises or installed software license, covering license grants, restrictions, updates, warranties, liability, and confidentiality.",
+    "filename": "software-license-agreement.md"
+  },
+  {
+    "name": "Partnership Agreement",
+    "description": "Common Paper's standard terms for a business partnership involving mutual obligations, trademark licensing, fees, and confidentiality between a company and a partner.",
+    "filename": "partnership-agreement.md"
+  },
+  {
+    "name": "Business Associate Agreement",
+    "description": "Common Paper's standard HIPAA business associate agreement terms, covering permitted uses and disclosures of PHI, safeguards, subcontractors, and breach notification.",
+    "filename": "business-associate-agreement.md"
+  },
+  {
+    "name": "Pilot Agreement",
+    "description": "Common Paper's standard terms for a time-limited product pilot or evaluation period, covering access rights, restrictions, warranties, and liability ahead of a definitive agreement.",
+    "filename": "pilot-agreement.md"
+  },
+  {
+    "name": "AI Addendum",
+    "description": "Common Paper's standard addendum supplementing a product agreement with AI-specific terms covering input/output ownership, model training restrictions, and AI-related disclaimers.",
+    "filename": "ai-addendum.md"
+  }
+]
