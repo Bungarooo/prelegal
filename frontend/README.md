@@ -18,10 +18,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Testing
+
+```bash
+npm run test        # run the unit test suite once
+npm run test:watch  # re-run on change
+```
+
+Unit tests cover `lib/nda.ts` — the document-generation logic (term/date
+formatting, placeholder fallbacks, Markdown table escaping, filename
+sanitization) — since that's where the legal text is actually assembled.
+
 ## Structure
 
 - `lib/nda.ts` — NDA data model and the Standard Terms/Cover Page text, with
   helpers to fill in the entered values and generate the downloadable Markdown.
+- `lib/nda.test.ts` — unit tests for the above.
 - `components/NdaForm.tsx` — the input form.
 - `components/NdaPreview.tsx` — the live, filled-in document preview.
 - `app/page.tsx` — wires the form and preview together and handles downloads.

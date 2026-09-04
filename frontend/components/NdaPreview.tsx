@@ -1,19 +1,19 @@
 import {
   confidentialityTermText,
+  fallback,
   formatDate,
   mndaTermText,
   standardTermsParagraphs,
   type NdaFormData,
 } from "@/lib/nda";
 
-function display(value: string, placeholder: string): { text: string; empty: boolean } {
-  const trimmed = value.trim();
-  return trimmed ? { text: trimmed, empty: false } : { text: placeholder, empty: true };
-}
-
 function Field({ value, placeholder }: { value: string; placeholder: string }) {
-  const { text, empty } = display(value, placeholder);
-  return <span className={empty ? "text-black/35 italic" : undefined}>{text}</span>;
+  const empty = !value.trim();
+  return (
+    <span className={empty ? "text-black/60 italic" : undefined}>
+      {fallback(value, placeholder)}
+    </span>
+  );
 }
 
 function renderInline(text: string) {
@@ -46,33 +46,33 @@ export default function NdaPreview({ data }: { data: NdaFormData }) {
 
       <dl className="mt-3 space-y-3">
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-black/50">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-black/60">
             Purpose
           </dt>
           <dd>
-            <Field value={data.purpose} placeholder="[Purpose not specified]" />
+            <Field value={data.purpose} placeholder="[Purpose]" />
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-black/50">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-black/60">
             Effective Date
           </dt>
           <dd>{formatDate(data.effectiveDate)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-black/50">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-black/60">
             MNDA Term
           </dt>
           <dd>{mndaTermText(data)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-black/50">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-black/60">
             Term of Confidentiality
           </dt>
           <dd>{confidentialityTermText(data)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-black/50">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-black/60">
             Governing Law &amp; Jurisdiction
           </dt>
           <dd>
@@ -83,7 +83,7 @@ export default function NdaPreview({ data }: { data: NdaFormData }) {
         </div>
         {data.modifications.trim() && (
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-black/50">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-black/60">
               MNDA Modifications
             </dt>
             <dd>{data.modifications}</dd>
@@ -99,7 +99,9 @@ export default function NdaPreview({ data }: { data: NdaFormData }) {
       <table className="mt-3 w-full border-collapse text-left">
         <thead>
           <tr>
-            <th className="border border-black/15 p-2"></th>
+            <th className="border border-black/15 p-2">
+              <span className="sr-only">Field</span>
+            </th>
             <th className="border border-black/15 p-2 font-semibold">Party 1</th>
             <th className="border border-black/15 p-2 font-semibold">Party 2</th>
           </tr>
@@ -163,7 +165,7 @@ export default function NdaPreview({ data }: { data: NdaFormData }) {
         ))}
       </div>
 
-      <p className="mt-6 text-xs text-black/50">
+      <p className="mt-6 text-xs text-black/60">
         Common Paper Mutual Non-Disclosure Agreement (Version 1.0), incorporated by reference,
         free to use under CC BY 4.0.
       </p>

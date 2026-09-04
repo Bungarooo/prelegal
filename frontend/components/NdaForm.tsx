@@ -1,6 +1,6 @@
 "use client";
 
-import type { NdaFormData, PartyInfo } from "@/lib/nda";
+import { positiveYears, type NdaFormData, type PartyInfo } from "@/lib/nda";
 
 type PartyKey = "party1" | "party2";
 
@@ -13,6 +13,10 @@ export default function NdaForm({
 }) {
   function set<K extends keyof NdaFormData>(key: K, value: NdaFormData[K]) {
     onChange({ ...data, [key]: value });
+  }
+
+  function setPositiveYears(key: "mndaTermYears" | "confidentialityTermYears", raw: string) {
+    set(key, positiveYears(Number(raw)));
   }
 
   function setParty(partyKey: PartyKey, field: keyof PartyInfo, value: string) {
@@ -62,9 +66,7 @@ export default function NdaForm({
                   className={numberInlineClass}
                   value={data.mndaTermYears}
                   onFocus={() => set("mndaTermType", "expires")}
-                  onChange={(e) =>
-                    set("mndaTermYears", Number(e.target.value) || 1)
-                  }
+                  onChange={(e) => setPositiveYears("mndaTermYears", e.target.value)}
                 />
                 year(s) from Effective Date.
               </span>
@@ -96,9 +98,7 @@ export default function NdaForm({
                   className={numberInlineClass}
                   value={data.confidentialityTermYears}
                   onFocus={() => set("confidentialityTermType", "years")}
-                  onChange={(e) =>
-                    set("confidentialityTermYears", Number(e.target.value) || 1)
-                  }
+                  onChange={(e) => setPositiveYears("confidentialityTermYears", e.target.value)}
                 />
                 year(s) from Effective Date (trade secrets protected until no
                 longer a trade secret).
@@ -282,19 +282,21 @@ function RadioCard({
           : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
       }`}
     >
-      <span
-        className={`relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-          checked ? "border-indigo-500" : "border-neutral-300"
-        }`}
-      >
+      <span className="relative mt-0.5 flex h-4 w-4 shrink-0">
         <input
           type="radio"
           name={name}
           checked={checked}
           onChange={onSelect}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
-        {checked && <span className="h-2 w-2 rounded-full bg-indigo-500" />}
+        <span
+          className={`pointer-events-none absolute inset-0 flex items-center justify-center rounded-full border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2 ${
+            checked ? "border-indigo-500" : "border-neutral-300"
+          }`}
+        >
+          {checked && <span className="h-2 w-2 rounded-full bg-indigo-500" />}
+        </span>
       </span>
       <span>{children}</span>
     </label>
