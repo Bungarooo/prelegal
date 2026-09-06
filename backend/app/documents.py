@@ -149,16 +149,22 @@ def _escape_table_cell(value: str) -> str:
 def _render_term_table(
     class_name: str, key_term_pairs: list[tuple[str, str]], values: dict[str, str]
 ) -> list[str]:
+    """Renders a term table with only the terms that have a known value; returns
+    an empty list (no header, no table) if none of them do yet."""
+    filled = [(term, (values.get(key) or "").strip()) for key, term in key_term_pairs]
+    filled = [(term, value) for term, value in filled if value]
+    if not filled:
+        return []
     lines = [f"## {SECTION_TITLES[class_name]}", "", "| Term | Value |", "|---|---|"]
-    for key, term in key_term_pairs:
-        value = (values.get(key) or "").strip() or f"[{term}]"
+    for term, value in filled:
         lines.append(f"| {term} | {_escape_table_cell(value)} |")
     lines.append("")
     return lines
 
 
 def render_document_markdown(spec: DocumentSpec, values: dict[str, str]) -> str:
-    """Renders a generic document as term/value tables followed by the boilerplate."""
+    """Renders a generic document as term/value tables (only for terms with a known
+    value) followed by the boilerplate."""
     filename = f"{spec.slug}.md"
     raw = (TEMPLATES_DIR / filename).read_text(encoding="utf-8")
     title, _, rest = raw.partition("\n")
@@ -171,21 +177,24 @@ def render_document_markdown(spec: DocumentSpec, values: dict[str, str]) -> str:
     # than by term text, since two different classes could in principle share a term.
     key_map_items = list(field_key_map(spec.terms).items())
 
-    lines = [
-        title if title.startswith("# ") else f"# {spec.name}",
-        "",
-        "This document consists of the terms below (Cover Page / Order Form / Key Terms, "
-        "as applicable) and the Standard Terms that follow.",
-        "",
-    ]
+    table_lines: list[str] = []
     offset = 0
     for class_name in LINK_CLASSES:
         terms = spec.terms_by_class.get(class_name, [])
         if terms:
-            lines.extend(
+            table_lines.extend(
                 _render_term_table(class_name, key_map_items[offset : offset + len(terms)], values)
             )
         offset += len(terms)
+
+    lines = [title if title.startswith("# ") else f"# {spec.name}", ""]
+    if table_lines:
+        lines.append(
+            "This document consists of the terms below (Cover Page / Order Form / Key Terms, "
+            "as applicable) and the Standard Terms that follow."
+        )
+        lines.append("")
+        lines.extend(table_lines)
     lines.append("## Standard Terms")
     lines.append("")
     lines.append(boilerplate)

@@ -39,8 +39,10 @@ def test_render_document_returns_a_blank_preview_with_no_fields():
 
     assert response.status_code == 200
     body = response.json()
-    assert "[Customer]" in body["markdown"]
-    assert "## Order Form" in body["markdown"]
+    assert "# Pilot Agreement" in body["markdown"]
+    assert "## Standard Terms" in body["markdown"]
+    assert "[Customer]" not in body["markdown"]
+    assert "## Order Form" not in body["markdown"]
 
 
 def test_render_document_fills_in_given_fields():

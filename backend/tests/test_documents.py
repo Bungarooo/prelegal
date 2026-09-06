@@ -60,12 +60,30 @@ def test_get_document_spec_returns_none_for_unknown_slug():
     assert documents.get_document_spec("not-a-real-document") is None
 
 
-def test_render_document_markdown_uses_placeholder_for_missing_values():
+def test_render_document_markdown_omits_unfilled_terms_and_their_tables():
     spec = documents.get_document_spec("cloud-service-agreement")
     markdown = documents.render_document_markdown(spec, {})
-    assert "[Customer]" in markdown
-    assert "## Cover Page" in markdown
+
+    assert "[Customer]" not in markdown
+    assert "## Cover Page" not in markdown
+    assert "## Order Form" not in markdown
+    assert "## Key Terms" not in markdown
+    assert "consists of the terms below" not in markdown
     assert "## Standard Terms" in markdown
+
+
+def test_render_document_markdown_only_shows_the_table_for_a_filled_class():
+    spec = documents.get_document_spec("cloud-service-agreement")
+    key_map = documents.field_key_map(spec.terms_by_class["coverpage_link"])
+    customer_key = next(key for key, term in key_map.items() if term == "Customer")
+
+    markdown = documents.render_document_markdown(spec, {customer_key: "Acme, Inc."})
+
+    assert "## Cover Page" in markdown
+    assert "| Customer | Acme, Inc. |" in markdown
+    assert "[Provider]" not in markdown  # Cover Page's other term, still unfilled
+    assert "## Order Form" not in markdown
+    assert "## Key Terms" not in markdown
 
 
 def test_render_document_markdown_uses_the_same_keys_as_field_key_map_of_all_terms():
