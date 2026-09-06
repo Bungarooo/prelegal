@@ -32,7 +32,11 @@ def test_chat_extracts_mentioned_fields(monkeypatch):
     with TestClient(app) as client:
         response = client.post(
             "/api/chat",
-            json={"messages": [{"role": "user", "content": "My name is Alice"}], "fields": {}},
+            json={
+                "messages": [{"role": "user", "content": "My name is Alice"}],
+                "fields": {},
+                "username": "alice",
+            },
         )
 
     assert response.status_code == 200
@@ -50,7 +54,7 @@ def test_chat_leaves_fields_null_when_nothing_mentioned(monkeypatch):
     monkeypatch.setattr(chat_module, "completion", fake_completion(extraction))
 
     with TestClient(app) as client:
-        response = client.post("/api/chat", json={"messages": [], "fields": {}})
+        response = client.post("/api/chat", json={"messages": [], "fields": {}, "username": "alice"})
 
     body = response.json()
     assert all(value is None for value in body["fields"].values())
@@ -64,7 +68,11 @@ def test_chat_includes_known_fields_in_the_prompt(monkeypatch):
     with TestClient(app) as client:
         client.post(
             "/api/chat",
-            json={"messages": [{"role": "user", "content": "hi"}], "fields": {"purpose": "testing"}},
+            json={
+                "messages": [{"role": "user", "content": "hi"}],
+                "fields": {"purpose": "testing"},
+                "username": "alice",
+            },
         )
 
     system_message = fake.last_kwargs["messages"][0]
@@ -79,7 +87,7 @@ def test_chat_appends_a_question_when_the_ai_forgets_to_ask_one(monkeypatch):
     monkeypatch.setattr(chat_module, "completion", fake_completion(extraction))
 
     with TestClient(app) as client:
-        response = client.post("/api/chat", json={"messages": [], "fields": {}})
+        response = client.post("/api/chat", json={"messages": [], "fields": {}, "username": "alice"})
 
     body = response.json()
     assert body["complete"] is False
@@ -94,7 +102,7 @@ def test_chat_does_not_duplicate_a_question_the_ai_already_asked(monkeypatch):
     monkeypatch.setattr(chat_module, "completion", fake_completion(extraction))
 
     with TestClient(app) as client:
-        response = client.post("/api/chat", json={"messages": [], "fields": {}})
+        response = client.post("/api/chat", json={"messages": [], "fields": {}, "username": "alice"})
 
     body = response.json()
     assert body["reply"] == "Got it! What's Party 2's company?"
@@ -107,7 +115,9 @@ def test_chat_reports_complete_once_every_required_field_is_known(monkeypatch):
     monkeypatch.setattr(chat_module, "completion", fake_completion(extraction))
 
     with TestClient(app) as client:
-        response = client.post("/api/chat", json={"messages": [], "fields": COMPLETE_FIELDS})
+        response = client.post(
+            "/api/chat", json={"messages": [], "fields": COMPLETE_FIELDS, "username": "alice"}
+        )
 
     body = response.json()
     assert body["complete"] is True
@@ -127,10 +137,32 @@ def test_chat_considers_fields_extracted_this_turn_towards_completeness(monkeypa
 
     with TestClient(app) as client:
         response = client.post(
-            "/api/chat", json={"messages": [], "fields": fields_missing_jurisdiction}
+            "/api/chat",
+            json={"messages": [], "fields": fields_missing_jurisdiction, "username": "alice"},
         )
 
     assert response.json()["complete"] is True
+
+
+def test_chat_saves_merged_fields_to_document_history(monkeypatch):
+    extraction = chat_module.ChatExtraction(
+        reply="Nice to meet you, Alice!",
+        fields=chat_module.NdaFieldsUpdate(party1=chat_module.PartyFields(name="Alice")),
+    )
+    monkeypatch.setattr(chat_module, "completion", fake_completion(extraction))
+
+    with TestClient(app) as client:
+        client.post(
+            "/api/chat",
+            json={"messages": [], "fields": {"purpose": "testing"}, "username": "alice"},
+        )
+
+        history = chat_module.db.list_document_history("alice")
+
+    assert len(history) == 1
+    assert history[0]["slug"] == "mutual-nda"
+    assert history[0]["fields"]["party1"]["name"] == "Alice"
+    assert history[0]["fields"]["purpose"] == "testing"
 
 
 def test_merge_fields_merges_nested_party_dicts():

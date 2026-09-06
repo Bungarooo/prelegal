@@ -5,8 +5,13 @@ from fastapi import APIRouter
 from litellm import completion
 from pydantic import BaseModel
 
+from app import db
+
 MODEL = "openrouter/openai/gpt-oss-120b"
 EXTRA_BODY = {"provider": {"order": ["cerebras"]}}
+
+NDA_SLUG = "mutual-nda"
+NDA_NAME = "Mutual Non-Disclosure Agreement"
 
 router = APIRouter(prefix="/api/chat")
 
@@ -109,6 +114,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     fields: dict
+    username: str
 
 
 def _get_path(data: dict, path: str) -> object:
@@ -163,5 +169,7 @@ def chat(request: ChatRequest) -> ChatTurnResult:
         reply = f"{reply}\n\n{COMPLETION_NOTICE}"
     elif not reply.endswith("?"):
         reply = f"{reply} {question}"
+
+    db.save_document_history(request.username, NDA_SLUG, NDA_NAME, merged_fields)
 
     return ChatTurnResult(reply=reply, fields=extraction.fields, complete=question is None)

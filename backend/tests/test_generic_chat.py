@@ -73,7 +73,8 @@ def test_render_document_rejects_unknown_slug():
 def test_generic_chat_rejects_the_nda_slug():
     with TestClient(app) as client:
         response = client.post(
-            "/api/documents/mutual-nda/chat", json={"messages": [], "fields": {}}
+            "/api/documents/mutual-nda/chat",
+            json={"messages": [], "fields": {}, "username": "alice"},
         )
     assert response.status_code == 404
 
@@ -81,7 +82,8 @@ def test_generic_chat_rejects_the_nda_slug():
 def test_generic_chat_rejects_unknown_slug():
     with TestClient(app) as client:
         response = client.post(
-            "/api/documents/not-a-document/chat", json={"messages": [], "fields": {}}
+            "/api/documents/not-a-document/chat",
+            json={"messages": [], "fields": {}, "username": "alice"},
         )
     assert response.status_code == 404
 
@@ -100,7 +102,11 @@ def test_generic_chat_extracts_mentioned_field_and_stays_incomplete(monkeypatch)
     with TestClient(app) as client:
         response = client.post(
             f"/api/documents/{SLUG}/chat",
-            json={"messages": [{"role": "user", "content": "The customer is Acme, Inc."}], "fields": {}},
+            json={
+                "messages": [{"role": "user", "content": "The customer is Acme, Inc."}],
+                "fields": {},
+                "username": "alice",
+            },
         )
 
     assert response.status_code == 200
@@ -125,7 +131,7 @@ def test_generic_chat_merges_onto_existing_fields(monkeypatch):
     with TestClient(app) as client:
         response = client.post(
             f"/api/documents/{SLUG}/chat",
-            json={"messages": [], "fields": {customer_key: "Acme, Inc."}},
+            json={"messages": [], "fields": {customer_key: "Acme, Inc."}, "username": "alice"},
         )
 
     body = response.json()
@@ -144,7 +150,8 @@ def test_generic_chat_reports_complete_once_every_field_is_known(monkeypatch):
 
     with TestClient(app) as client:
         response = client.post(
-            f"/api/documents/{SLUG}/chat", json={"messages": [], "fields": all_filled}
+            f"/api/documents/{SLUG}/chat",
+            json={"messages": [], "fields": all_filled, "username": "alice"},
         )
 
     body = response.json()
@@ -160,12 +167,65 @@ def test_generic_chat_appends_a_question_when_incomplete(monkeypatch):
     )
 
     with TestClient(app) as client:
-        response = client.post(f"/api/documents/{SLUG}/chat", json={"messages": [], "fields": {}})
+        response = client.post(
+            f"/api/documents/{SLUG}/chat", json={"messages": [], "fields": {}, "username": "alice"}
+        )
 
     body = response.json()
     assert body["complete"] is False
     assert body["reply"].startswith("Got it, thanks!")
     assert body["reply"].endswith("?")
+
+
+def test_generic_chat_saves_merged_fields_to_document_history(monkeypatch):
+    spec = documents.get_document_spec(SLUG)
+    key_map = documents.field_key_map(spec.terms)
+    customer_key = next(k for k, term in key_map.items() if term == "Customer")
+
+    monkeypatch.setattr(
+        generic_chat_module,
+        "completion",
+        fake_completion(_extraction_json("Got it.", {customer_key: "Acme, Inc."})),
+    )
+
+    with TestClient(app) as client:
+        client.post(
+            f"/api/documents/{SLUG}/chat",
+            json={"messages": [], "fields": {}, "username": "alice"},
+        )
+
+        history = generic_chat_module.db.list_document_history("alice")
+
+    assert len(history) == 1
+    assert history[0]["slug"] == SLUG
+    assert history[0]["fields"][customer_key] == "Acme, Inc."
+    assert "Acme, Inc." in history[0]["markdown"]
+
+
+def test_document_history_endpoint_lists_saved_documents(monkeypatch):
+    monkeypatch.setattr(
+        generic_chat_module, "completion", fake_completion(_extraction_json("Got it.", {}))
+    )
+
+    with TestClient(app) as client:
+        client.post(
+            f"/api/documents/{SLUG}/chat",
+            json={"messages": [], "fields": {}, "username": "alice"},
+        )
+        response = client.get("/api/documents/history", params={"username": "alice"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["slug"] == SLUG
+
+
+def test_document_history_endpoint_is_empty_for_unknown_user():
+    with TestClient(app) as client:
+        response = client.get("/api/documents/history", params={"username": "nobody"})
+
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_route_document_returns_matched_slug(monkeypatch):

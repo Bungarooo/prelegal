@@ -5,11 +5,13 @@ import ChatBubble, { type ChatMessage } from "@/components/ChatBubble";
 import type { GenericChatResult, GenericFields } from "@/lib/documents";
 
 export default function DocumentChat({
+  username,
   slug,
   name,
   fields,
   onChange,
 }: {
+  username: string;
   slug: string;
   name: string;
   fields: GenericFields;
@@ -40,7 +42,7 @@ export default function DocumentChat({
       const response = await fetch(`/api/documents/${slug}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, fields }),
+        body: JSON.stringify({ messages: nextMessages, fields, username }),
       });
       if (!response.ok) {
         setError("Something went wrong. Please try again.");
