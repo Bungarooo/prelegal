@@ -5,6 +5,7 @@ import {
   fallback,
   formatDate,
   generateMarkdown,
+  mergeFields,
   mndaTermText,
   positiveYears,
   standardTermsParagraphs,
@@ -247,5 +248,48 @@ describe("suggestedFilename", () => {
       party1: { ...defaultNdaFormData().party1, company: "Smith & Sons, Inc./LLC" },
     });
     expect(suggestedFilename(data)).toMatch(/^Mutual-NDA-Smith-Sons-Inc-LLC\.md$/);
+  });
+});
+
+describe("mergeFields", () => {
+  it("overwrites only the fields present in the update", () => {
+    const current = withData({ purpose: "Original purpose", governingLaw: "Delaware" });
+
+    const merged = mergeFields(current, { purpose: "Updated purpose" });
+
+    expect(merged.purpose).toBe("Updated purpose");
+    expect(merged.governingLaw).toBe("Delaware");
+  });
+
+  it("leaves fields untouched when the update value is null", () => {
+    const current = withData({ purpose: "Original purpose" });
+
+    const merged = mergeFields(current, { purpose: null });
+
+    expect(merged.purpose).toBe("Original purpose");
+  });
+
+  it("merges nested party fields individually", () => {
+    const current = withData({
+      party1: { name: "Alice", title: "CEO", company: "Acme", noticeAddress: "alice@acme.com" },
+    });
+
+    const merged = mergeFields(current, { party1: { company: "New Co", title: null } });
+
+    expect(merged.party1).toEqual({
+      name: "Alice",
+      title: "CEO",
+      company: "New Co",
+      noticeAddress: "alice@acme.com",
+    });
+  });
+
+  it("leaves a party untouched when its update is null or omitted", () => {
+    const current = withData({});
+
+    const merged = mergeFields(current, { party1: null });
+
+    expect(merged.party1).toEqual(current.party1);
+    expect(merged.party2).toEqual(current.party2);
   });
 });

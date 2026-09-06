@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import LoginScreen from "@/components/LoginScreen";
-import NdaForm from "@/components/NdaForm";
+import NdaChat from "@/components/NdaChat";
 import NdaPreview from "@/components/NdaPreview";
 import { defaultNdaFormData, generateMarkdown, suggestedFilename } from "@/lib/nda";
 
@@ -53,7 +53,7 @@ export default function Home() {
             Mutual NDA Creator
           </h1>
           <p className="text-sm text-neutral-500">
-            Fill in the form and your Mutual Non-Disclosure Agreement is generated live below.
+            Chat with the assistant and your Mutual Non-Disclosure Agreement is generated live below.
           </p>
         </div>
         <button
@@ -66,9 +66,9 @@ export default function Home() {
       </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-[440px_1fr]">
-        <section aria-label="NDA details form" className="print:hidden">
+        <section aria-label="NDA chat assistant" className="print:hidden">
           <div className="sticky top-24 space-y-5">
-            <NdaForm data={data} onChange={setData} />
+            <NdaChat data={data} onChange={setData} />
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"

@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import { mergeFields, type NdaFieldsUpdate, type NdaFormData } from "@/lib/nda";
+
+type Role = "user" | "assistant";
+
+interface ChatMessage {
+  role: Role;
+  content: string;
+}
+
+const GREETING: ChatMessage = {
+  role: "assistant",
+  content:
+    "Hi! I'll help you put together your Mutual NDA. Let's start with the basics — what's the purpose of this agreement, and who are the two parties involved?",
+};
+
+export default function NdaChat({
+  data,
+  onChange,
+}: {
+  data: NdaFormData;
+  onChange: (data: NdaFormData) => void;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    const content = input.trim();
+    if (!content || sending) return;
+
+    const nextMessages = [...messages, { role: "user", content } satisfies ChatMessage];
+    setMessages(nextMessages);
+    setInput("");
+    setError(null);
+    setSending(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages, fields: data }),
+      });
+      if (!response.ok) {
+        setError("Something went wrong. Please try again.");
+        return;
+      }
+      const body: { reply: string; fields: NdaFieldsUpdate } = await response.json();
+      setMessages([...nextMessages, { role: "assistant", content: body.reply }]);
+      onChange(mergeFields(data, body.fields));
+    } catch {
+      setError("Could not reach the server. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <div className="flex-1 space-y-3 overflow-y-auto px-5 py-5">
+        {messages.map((message, i) => (
+          <ChatBubble key={i} message={message} />
+        ))}
+        {sending && <ChatBubble message={{ role: "assistant", content: "…" }} />}
+      </div>
+
+      {error && <p className="px-5 pb-2 text-sm text-red-600">{error}</p>}
+
+      <form onSubmit={handleSend} className="flex gap-2 border-t border-neutral-200 p-4">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your answer..."
+          aria-label="Chat message"
+          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/40"
+        />
+        <button
+          type="submit"
+          disabled={sending || !input.trim()}
+          className="rounded-lg bg-[#753991] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#753991]/40 disabled:opacity-60"
+        >
+          Send
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  return (
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
+          isUser ? "bg-[#209dd7] text-white" : "bg-neutral-100 text-neutral-900"
+        }`}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
+}

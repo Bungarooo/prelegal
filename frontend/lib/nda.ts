@@ -29,6 +29,50 @@ export const emptyParty: PartyInfo = {
   noticeAddress: "",
 };
 
+type PartyFieldsUpdate = Partial<Record<keyof PartyInfo, string | null>> | null;
+
+/** Shape of the partial field updates the AI chat backend returns each turn. */
+export interface NdaFieldsUpdate {
+  party1?: PartyFieldsUpdate;
+  party2?: PartyFieldsUpdate;
+  purpose?: string | null;
+  effectiveDate?: string | null;
+  mndaTermType?: MndaTermType | null;
+  mndaTermYears?: number | null;
+  confidentialityTermType?: ConfidentialityTermType | null;
+  confidentialityTermYears?: number | null;
+  governingLaw?: string | null;
+  jurisdiction?: string | null;
+  modifications?: string | null;
+}
+
+function mergeParty(current: PartyInfo, update: PartyFieldsUpdate | undefined): PartyInfo {
+  if (!update) return current;
+  return {
+    name: update.name ?? current.name,
+    title: update.title ?? current.title,
+    company: update.company ?? current.company,
+    noticeAddress: update.noticeAddress ?? current.noticeAddress,
+  };
+}
+
+/** Applies a partial field update onto existing form data, keeping any field left null/undefined. */
+export function mergeFields(current: NdaFormData, update: NdaFieldsUpdate): NdaFormData {
+  return {
+    party1: mergeParty(current.party1, update.party1),
+    party2: mergeParty(current.party2, update.party2),
+    purpose: update.purpose ?? current.purpose,
+    effectiveDate: update.effectiveDate ?? current.effectiveDate,
+    mndaTermType: update.mndaTermType ?? current.mndaTermType,
+    mndaTermYears: update.mndaTermYears ?? current.mndaTermYears,
+    confidentialityTermType: update.confidentialityTermType ?? current.confidentialityTermType,
+    confidentialityTermYears: update.confidentialityTermYears ?? current.confidentialityTermYears,
+    governingLaw: update.governingLaw ?? current.governingLaw,
+    jurisdiction: update.jurisdiction ?? current.jurisdiction,
+    modifications: update.modifications ?? current.modifications,
+  };
+}
+
 /** Today's date as a yyyy-mm-dd string in the local timezone (not UTC). */
 export function todayLocalIso(): string {
   const d = new Date();
