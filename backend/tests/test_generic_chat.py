@@ -33,6 +33,41 @@ def test_list_documents_covers_full_catalog_once():
     assert "cloud-service-agreement" in slugs
 
 
+def test_render_document_returns_a_blank_preview_with_no_fields():
+    with TestClient(app) as client:
+        response = client.post(f"/api/documents/{SLUG}/render", json={})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "[Customer]" in body["markdown"]
+    assert "## Order Form" in body["markdown"]
+
+
+def test_render_document_fills_in_given_fields():
+    spec = documents.get_document_spec(SLUG)
+    key_map = documents.field_key_map(spec.terms)
+    customer_key = next(k for k, term in key_map.items() if term == "Customer")
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/api/documents/{SLUG}/render", json={"fields": {customer_key: "Acme, Inc."}}
+        )
+
+    assert "Acme, Inc." in response.json()["markdown"]
+
+
+def test_render_document_rejects_the_nda_slug():
+    with TestClient(app) as client:
+        response = client.post("/api/documents/mutual-nda/render", json={})
+    assert response.status_code == 404
+
+
+def test_render_document_rejects_unknown_slug():
+    with TestClient(app) as client:
+        response = client.post("/api/documents/not-a-document/render", json={})
+    assert response.status_code == 404
+
+
 def test_generic_chat_rejects_the_nda_slug():
     with TestClient(app) as client:
         response = client.post(

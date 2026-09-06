@@ -34,11 +34,25 @@ export default function Home() {
     setSelected(null);
   }
 
-  function handleSelectDocument(slug: string, name: string) {
+  async function handleSelectDocument(slug: string, name: string) {
     setData(defaultNdaFormData());
     setGenericFields({});
     setGenericMarkdown("");
     setSelected({ slug, name });
+
+    if (slug === NDA_SLUG) return;
+    try {
+      const response = await fetch(`/api/documents/${slug}/render`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: {} }),
+      });
+      if (!response.ok) return;
+      const body: { markdown: string } = await response.json();
+      setGenericMarkdown(body.markdown);
+    } catch {
+      // Leave the preview blank; DocumentChat will populate it once the user sends a message.
+    }
   }
 
   if (!username) {

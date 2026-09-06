@@ -71,7 +71,7 @@ export default function NdaChat({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type your answer..."
           aria-label="Chat message"
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/40"
+          className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/40"
         />
         <button
           type="submit"

@@ -129,7 +129,11 @@ describe("Home", () => {
 
   it("resets the chat greeting when switching between two generic documents", async () => {
     sessionStorage.setItem("prelegal_username", "alice");
-    global.fetch = mockFetchRouter({ "/api/documents": { ok: true, body: DOCUMENTS } });
+    global.fetch = mockFetchRouter({
+      "/api/documents/cloud-service-agreement/render": { ok: true, body: { markdown: "# Cloud Service Agreement" } },
+      "/api/documents/pilot-agreement/render": { ok: true, body: { markdown: "# Pilot Agreement" } },
+      "/api/documents": { ok: true, body: DOCUMENTS },
+    });
     render(<Home />);
 
     await userEvent.click(await screen.findByRole("button", { name: /cloud service agreement/i }));
@@ -140,5 +144,22 @@ describe("Home", () => {
 
     expect(await screen.findByText(/put together your pilot agreement/i)).toBeInTheDocument();
     expect(screen.queryByText(/put together your cloud service agreement/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a blank preview immediately when selecting a generic document, before any chat message", async () => {
+    sessionStorage.setItem("prelegal_username", "alice");
+    global.fetch = mockFetchRouter({
+      "/api/documents/cloud-service-agreement/render": {
+        ok: true,
+        body: { markdown: "# Cloud Service Agreement\n\n| Term | Value |\n|---|---|\n| Customer | [Customer] |" },
+      },
+      "/api/documents": { ok: true, body: DOCUMENTS },
+    });
+    render(<Home />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /cloud service agreement/i }));
+
+    expect(await screen.findByText(/\[Customer\]/)).toBeInTheDocument();
+    expect(screen.queryByText(/start chatting to generate a preview/i)).not.toBeInTheDocument();
   });
 });

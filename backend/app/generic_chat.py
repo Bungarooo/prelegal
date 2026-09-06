@@ -53,6 +53,14 @@ class GenericChatResult(BaseModel):
     markdown: str
 
 
+class RenderRequest(BaseModel):
+    fields: dict[str, str | None] = {}
+
+
+class RenderResult(BaseModel):
+    markdown: str
+
+
 class RouteRequest(BaseModel):
     message: str
 
@@ -139,6 +147,17 @@ def generic_chat(slug: str, request: GenericChatRequest) -> GenericChatResult:
         complete=missing_term is None,
         markdown=render_document_markdown(spec, merged),
     )
+
+
+@router.post("/{slug}/render")
+def render_document(slug: str, request: RenderRequest) -> RenderResult:
+    """Renders a document with no LLM call, e.g. to show a blank preview before chatting."""
+    if slug == NDA_SLUG:
+        raise HTTPException(status_code=404, detail="Use lib/nda.ts for the Mutual NDA")
+    spec = get_document_spec(slug)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="Unknown document type")
+    return RenderResult(markdown=render_document_markdown(spec, request.fields))
 
 
 @router.post("/route")
