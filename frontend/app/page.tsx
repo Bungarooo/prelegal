@@ -6,12 +6,22 @@ import NdaForm from "@/components/NdaForm";
 import NdaPreview from "@/components/NdaPreview";
 import { defaultNdaFormData, generateMarkdown, suggestedFilename } from "@/lib/nda";
 
+const SESSION_STORAGE_KEY = "prelegal_username";
+
 export default function Home() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [username, setUsername] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(SESSION_STORAGE_KEY);
+  });
   const [data, setData] = useState(defaultNdaFormData);
 
-  if (!loggedIn) {
-    return <LoginScreen onLogin={() => setLoggedIn(true)} />;
+  function handleLogin(loggedInUsername: string) {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, loggedInUsername);
+    setUsername(loggedInUsername);
+  }
+
+  if (!username) {
+    return <LoginScreen onLogin={handleLogin} />;
   }
 
   function downloadMarkdown() {
