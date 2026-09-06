@@ -23,6 +23,13 @@ TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
 NDA_SLUG = "mutual-nda"
 NDA_FILENAMES = {"mutual-nda.md", "mutual-nda-coverpage.md"}
 
+# Every one of the 11 generic templates identifies its two contracting parties using
+# exactly two terms from this vocabulary (verified against all 11: e.g. Customer/
+# Provider, Company/Partner). Used to always render signature slots for them, even
+# though other terms are hidden until answered — a signature line is something the
+# user fills in by hand after printing, not something the chat collects.
+PARTY_TERMS = {"Customer", "Provider", "Partner", "Company"}
+
 LINK_CLASSES = ["coverpage_link", "orderform_link", "keyterms_link"]
 SECTION_TITLES = {
     "coverpage_link": "Cover Page",
@@ -162,9 +169,35 @@ def _render_term_table(
     return lines
 
 
+def _render_signature_block(
+    party_terms: list[str], term_to_key: dict[str, str], values: dict[str, str]
+) -> list[str]:
+    """Renders always-blank Signature/Date slots (plus Print Name if known) for each
+    recognized party — these are filled in by hand after printing, so unlike the term
+    tables they're never hidden for being unanswered."""
+    if not party_terms:
+        return []
+
+    def row(label, cell):
+        return f"| {label} | " + " | ".join(cell(term) for term in party_terms) + " |"
+
+    lines = [
+        "## Signatures",
+        "",
+        "| | " + " | ".join(party_terms) + " |",
+        "|---|" + "---|" * len(party_terms),
+        row("Print Name", lambda term: _escape_table_cell((values.get(term_to_key.get(term, "")) or "").strip())),
+        row("Signature", lambda _term: ""),
+        row("Date", lambda _term: ""),
+        "",
+    ]
+    return lines
+
+
 def render_document_markdown(spec: DocumentSpec, values: dict[str, str]) -> str:
     """Renders a generic document as term/value tables (only for terms with a known
-    value) followed by the boilerplate."""
+    value), always-present signature slots for the contracting parties, and the
+    boilerplate."""
     filename = f"{spec.slug}.md"
     raw = (TEMPLATES_DIR / filename).read_text(encoding="utf-8")
     title, _, rest = raw.partition("\n")
@@ -187,21 +220,27 @@ def render_document_markdown(spec: DocumentSpec, values: dict[str, str]) -> str:
             )
         offset += len(terms)
 
+    term_to_key: dict[str, str] = {}
+    for key, term in key_map_items:
+        term_to_key.setdefault(term, key)
+    party_terms = [term for term in spec.terms if term in PARTY_TERMS]
+    signature_lines = _render_signature_block(party_terms, term_to_key, values)
+
     lines = [title if title.startswith("# ") else f"# {spec.name}", ""]
-    if table_lines:
+    if table_lines or signature_lines:
         lines.append(
-            "This document consists of the terms below (Cover Page / Order Form / Key Terms, "
-            "as applicable) and the Standard Terms that follow."
+            "This document consists of the terms and signatures below (Cover Page / "
+            "Order Form / Key Terms, as applicable) and the Standard Terms that follow."
         )
         lines.append("")
         lines.extend(table_lines)
+        lines.extend(signature_lines)
     lines.append("## Standard Terms")
     lines.append("")
     lines.append(boilerplate)
     lines.append("")
     lines.append(
-        "This is a generated draft based on Common Paper's standard terms. It is not "
-        "signed — execute it through your usual signature process, and consider having "
-        "a lawyer review it before signing."
+        "This is a generated draft based on Common Paper's standard terms. Consider "
+        "having a lawyer review it before signing."
     )
     return "\n".join(lines)

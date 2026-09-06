@@ -60,7 +60,7 @@ def test_get_document_spec_returns_none_for_unknown_slug():
     assert documents.get_document_spec("not-a-real-document") is None
 
 
-def test_render_document_markdown_omits_unfilled_terms_and_their_tables():
+def test_render_document_markdown_omits_unfilled_terms_but_keeps_signature_slots():
     spec = documents.get_document_spec("cloud-service-agreement")
     markdown = documents.render_document_markdown(spec, {})
 
@@ -68,8 +68,14 @@ def test_render_document_markdown_omits_unfilled_terms_and_their_tables():
     assert "## Cover Page" not in markdown
     assert "## Order Form" not in markdown
     assert "## Key Terms" not in markdown
-    assert "consists of the terms below" not in markdown
     assert "## Standard Terms" in markdown
+    # Signature slots are filled in by hand after printing, so they always show up,
+    # blank, regardless of what's been answered in chat.
+    assert "## Signatures" in markdown
+    assert "| | Customer | Provider |" in markdown
+    assert "| Print Name |  |  |" in markdown
+    assert "| Signature |  |  |" in markdown
+    assert "| Date |  |  |" in markdown
 
 
 def test_render_document_markdown_only_shows_the_table_for_a_filled_class():
@@ -84,6 +90,25 @@ def test_render_document_markdown_only_shows_the_table_for_a_filled_class():
     assert "[Provider]" not in markdown  # Cover Page's other term, still unfilled
     assert "## Order Form" not in markdown
     assert "## Key Terms" not in markdown
+
+
+def test_render_document_markdown_uses_the_collected_party_value_as_the_printed_name():
+    spec = documents.get_document_spec("cloud-service-agreement")
+    key_map = documents.field_key_map(spec.terms_by_class["coverpage_link"])
+    customer_key = next(key for key, term in key_map.items() if term == "Customer")
+
+    markdown = documents.render_document_markdown(spec, {customer_key: "Acme, Inc."})
+
+    assert "| Print Name | Acme, Inc. |  |" in markdown
+    assert "| Signature |  |  |" in markdown
+
+
+def test_every_generic_document_has_exactly_two_recognized_signature_parties():
+    for spec in documents.load_document_specs():
+        if spec.slug == documents.NDA_SLUG:
+            continue
+        party_terms = [term for term in spec.terms if term in documents.PARTY_TERMS]
+        assert len(party_terms) == 2, f"{spec.slug} has party terms {party_terms}"
 
 
 def test_render_document_markdown_uses_the_same_keys_as_field_key_map_of_all_terms():
