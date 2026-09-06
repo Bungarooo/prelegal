@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import AppHeader from "@/components/AppHeader";
+import DisclaimerBanner from "@/components/DisclaimerBanner";
 import DocumentChat from "@/components/DocumentChat";
 import DocumentPicker from "@/components/DocumentPicker";
 import DocumentPreview from "@/components/DocumentPreview";
+import HistoryList from "@/components/HistoryList";
 import LoginScreen from "@/components/LoginScreen";
 import NdaChat from "@/components/NdaChat";
 import NdaPreview from "@/components/NdaPreview";
-import { suggestedGenericFilename, type GenericFields } from "@/lib/documents";
-import { defaultNdaFormData, generateMarkdown, suggestedFilename } from "@/lib/nda";
+import { suggestedGenericFilename, type GenericFields, type HistoryEntry } from "@/lib/documents";
+import { defaultNdaFormData, generateMarkdown, suggestedFilename, type NdaFormData } from "@/lib/nda";
 
 const SESSION_STORAGE_KEY = "prelegal_username";
 const NDA_SLUG = "mutual-nda";
@@ -22,6 +25,8 @@ export default function Home() {
   const [data, setData] = useState(defaultNdaFormData);
   const [genericFields, setGenericFields] = useState<GenericFields>({});
   const [genericMarkdown, setGenericMarkdown] = useState("");
+  const [historyView, setHistoryView] = useState(false);
+  const [historyEntry, setHistoryEntry] = useState<HistoryEntry | null>(null);
 
   function handleLogin(loggedInUsername: string) {
     sessionStorage.setItem(SESSION_STORAGE_KEY, loggedInUsername);
@@ -34,10 +39,23 @@ export default function Home() {
     setSelected(null);
   }
 
+  function handleShowHistory() {
+    setHistoryView(true);
+    setHistoryEntry(null);
+  }
+
+  function handleBackToPicker() {
+    setSelected(null);
+    setHistoryView(false);
+    setHistoryEntry(null);
+  }
+
   async function handleSelectDocument(slug: string, name: string) {
     setData(defaultNdaFormData());
     setGenericFields({});
     setGenericMarkdown("");
+    setHistoryView(false);
+    setHistoryEntry(null);
     setSelected({ slug, name });
 
     if (slug === NDA_SLUG) return;
@@ -59,8 +77,55 @@ export default function Home() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
+  if (historyView) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
+        <AppHeader
+          title="Document History"
+          subtitle="Look back at documents you've worked on."
+          showChangeDocument
+          onChangeDocument={handleBackToPicker}
+          onHistory={handleShowHistory}
+          onSignOut={handleSignOut}
+        />
+        <DisclaimerBanner />
+        {historyEntry ? (
+          <main className="mx-auto max-w-[720px] px-6 py-8">
+            <button
+              type="button"
+              onClick={() => setHistoryEntry(null)}
+              className="mb-4 text-sm font-medium text-[#209dd7] hover:underline"
+            >
+              ← Back to history
+            </button>
+            {historyEntry.slug === NDA_SLUG ? (
+              <NdaPreview data={historyEntry.fields as unknown as NdaFormData} />
+            ) : (
+              <DocumentPreview markdown={historyEntry.markdown} />
+            )}
+          </main>
+        ) : (
+          <HistoryList username={username} onSelect={setHistoryEntry} />
+        )}
+      </div>
+    );
+  }
+
   if (!selected) {
-    return <DocumentPicker onSelect={handleSelectDocument} />;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
+        <AppHeader
+          title="Prelegal"
+          subtitle="Draft and manage your legal agreements."
+          showChangeDocument={false}
+          onChangeDocument={handleBackToPicker}
+          onHistory={handleShowHistory}
+          onSignOut={handleSignOut}
+        />
+        <DisclaimerBanner />
+        <DocumentPicker onSelect={handleSelectDocument} />
+      </div>
+    );
   }
 
   const isNda = selected.slug === NDA_SLUG;
@@ -85,41 +150,25 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
-      <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-200 bg-white/80 px-6 py-4 backdrop-blur print:hidden">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
-            {isNda ? "Mutual NDA Creator" : selected.name}
-          </h1>
-          <p className="text-sm text-neutral-500">
-            Chat with the assistant and your document is generated live below.
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-          >
-            Change Document
-          </button>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-          >
-            Sign Out
-          </button>
-        </div>
-      </header>
+      <AppHeader
+        title={isNda ? "Mutual NDA Creator" : selected.name}
+        subtitle="Chat with the assistant and your document is generated live below."
+        showChangeDocument
+        onChangeDocument={handleBackToPicker}
+        onHistory={handleShowHistory}
+        onSignOut={handleSignOut}
+      />
+      <DisclaimerBanner />
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-[440px_1fr]">
         <section aria-label="Document chat assistant" className="print:hidden">
           <div className="sticky top-24 space-y-5">
             {isNda ? (
-              <NdaChat data={data} onChange={setData} />
+              <NdaChat username={username} data={data} onChange={setData} />
             ) : (
               <DocumentChat
                 key={selected.slug}
+                username={username}
                 slug={selected.slug}
                 name={selected.name}
                 fields={genericFields}
@@ -133,7 +182,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={downloadPdf}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#753991] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#753991]/40"
               >
                 <DownloadIcon />
                 Download PDF
@@ -142,7 +191,7 @@ export default function Home() {
                 type="button"
                 onClick={downloadMarkdown}
                 disabled={!isNda && !genericMarkdown}
-                className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 disabled:opacity-60"
               >
                 <DownloadIcon />
                 Download Markdown

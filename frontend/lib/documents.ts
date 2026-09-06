@@ -19,6 +19,14 @@ export interface RouteResult {
   reply: string;
 }
 
+export interface HistoryEntry {
+  slug: string;
+  name: string;
+  fields: Record<string, unknown>;
+  markdown: string;
+  updated_at: string;
+}
+
 export function suggestedGenericFilename(name: string): string {
   const base = name.trim().replace(/[^a-zA-Z0-9-]+/g, "-") || "Document";
   return `${base}.md`;

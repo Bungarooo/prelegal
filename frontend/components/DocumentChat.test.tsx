@@ -14,7 +14,13 @@ describe("DocumentChat", () => {
   it("shows a document-specific greeting without calling the backend", () => {
     global.fetch = vi.fn();
     render(
-      <DocumentChat slug="cloud-service-agreement" name="Cloud Service Agreement" fields={{}} onChange={vi.fn()} />
+      <DocumentChat
+        username="alice"
+        slug="cloud-service-agreement"
+        name="Cloud Service Agreement"
+        fields={{}}
+        onChange={vi.fn()}
+      />
     );
 
     expect(screen.getByText(/put together your cloud service agreement/i)).toBeInTheDocument();
@@ -30,7 +36,13 @@ describe("DocumentChat", () => {
     });
     const onChange = vi.fn();
     render(
-      <DocumentChat slug="cloud-service-agreement" name="Cloud Service Agreement" fields={{}} onChange={onChange} />
+      <DocumentChat
+        username="alice"
+        slug="cloud-service-agreement"
+        name="Cloud Service Agreement"
+        fields={{}}
+        onChange={onChange}
+      />
     );
 
     await userEvent.type(screen.getByLabelText(/chat message/i), "The customer is Acme, Inc.");
@@ -42,12 +54,21 @@ describe("DocumentChat", () => {
       expect.objectContaining({ method: "POST" })
     );
     expect(onChange).toHaveBeenCalledWith({ customer: "Acme, Inc." }, "# Cloud Service Agreement");
+    const [, requestInit] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const requestBody = JSON.parse(requestInit.body as string);
+    expect(requestBody.username).toBe("alice");
   });
 
   it("shows an error message when the request fails", async () => {
     global.fetch = mockFetchResponse(false, { detail: "boom" });
     render(
-      <DocumentChat slug="cloud-service-agreement" name="Cloud Service Agreement" fields={{}} onChange={vi.fn()} />
+      <DocumentChat
+        username="alice"
+        slug="cloud-service-agreement"
+        name="Cloud Service Agreement"
+        fields={{}}
+        onChange={vi.fn()}
+      />
     );
 
     await userEvent.type(screen.getByLabelText(/chat message/i), "hello");

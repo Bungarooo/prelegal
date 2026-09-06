@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from litellm import completion
 from pydantic import BaseModel, create_model
 
+from app import db
 from app.documents import (
     NDA_SLUG,
     DocumentSpec,
@@ -44,6 +45,7 @@ class ChatMessage(BaseModel):
 class GenericChatRequest(BaseModel):
     messages: list[ChatMessage]
     fields: dict[str, str | None] = {}
+    username: str
 
 
 class GenericChatResult(BaseModel):
@@ -71,12 +73,25 @@ class RouteResult(BaseModel):
     reply: str
 
 
+class HistoryEntry(BaseModel):
+    slug: str
+    name: str
+    fields: dict
+    markdown: str
+    updated_at: str
+
+
 @router.get("")
 def list_documents() -> list[DocumentSummary]:
     return [
         DocumentSummary(slug=spec.slug, name=spec.name, description=spec.description)
         for spec in load_document_specs()
     ]
+
+
+@router.get("/history")
+def document_history(username: str) -> list[HistoryEntry]:
+    return [HistoryEntry(**row) for row in db.list_document_history(username)]
 
 
 def _build_extraction_model(key_map: dict[str, str]) -> type[BaseModel]:
@@ -141,11 +156,14 @@ def generic_chat(slug: str, request: GenericChatRequest) -> GenericChatResult:
     elif not reply.endswith("?"):
         reply = f"{reply} What's the value for {missing_term}?"
 
+    markdown = render_document_markdown(spec, merged)
+    db.save_document_history(request.username, slug, spec.name, merged, markdown=markdown)
+
     return GenericChatResult(
         reply=reply,
         fields=merged,
         complete=missing_term is None,
-        markdown=render_document_markdown(spec, merged),
+        markdown=markdown,
     )
 
 

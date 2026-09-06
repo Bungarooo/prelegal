@@ -11,9 +11,11 @@ const GREETING: ChatMessage = {
 };
 
 export default function NdaChat({
+  username,
   data,
   onChange,
 }: {
+  username: string;
   data: NdaFormData;
   onChange: (data: NdaFormData) => void;
 }) {
@@ -37,7 +39,7 @@ export default function NdaChat({
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, fields: data }),
+        body: JSON.stringify({ messages: nextMessages, fields: data, username }),
       });
       if (!response.ok) {
         setError("Something went wrong. Please try again.");

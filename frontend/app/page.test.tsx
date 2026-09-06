@@ -162,4 +162,63 @@ describe("Home", () => {
     expect(await screen.findByText(/\[Customer\]/)).toBeInTheDocument();
     expect(screen.queryByText(/start chatting to generate a preview/i)).not.toBeInTheDocument();
   });
+
+  it("shows the disclaimer banner on the picker and document screens", async () => {
+    sessionStorage.setItem("prelegal_username", "alice");
+    global.fetch = mockFetchRouter({ "/api/documents": { ok: true, body: DOCUMENTS } });
+    render(<Home />);
+
+    expect(await screen.findByText(/not a law firm/i)).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: /mutual non-disclosure agreement/i }));
+    expect(screen.getByText(/not a law firm/i)).toBeInTheDocument();
+  });
+
+  it("navigates to History from the picker, lists saved documents, and shows a read-only preview", async () => {
+    sessionStorage.setItem("prelegal_username", "alice");
+    global.fetch = mockFetchRouter({
+      "/api/documents/history": {
+        ok: true,
+        body: [
+          {
+            slug: "pilot-agreement",
+            name: "Pilot Agreement",
+            fields: { customer: "Acme" },
+            markdown: "# Pilot Agreement\n\nAcme content",
+            updated_at: "2026-09-06 12:00:00",
+          },
+        ],
+      },
+      "/api/documents": { ok: true, body: DOCUMENTS },
+    });
+    render(<Home />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /history/i }));
+
+    expect(await screen.findByText(/pilot agreement/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText(/pilot agreement/i));
+
+    expect(await screen.findByText(/acme content/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /back to history/i }));
+
+    expect(await screen.findByText(/last updated/i)).toBeInTheDocument();
+  });
+
+  it("returns to the picker from History via Change Document", async () => {
+    sessionStorage.setItem("prelegal_username", "alice");
+    global.fetch = mockFetchRouter({
+      "/api/documents/history": { ok: true, body: [] },
+      "/api/documents": { ok: true, body: DOCUMENTS },
+    });
+    render(<Home />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /history/i }));
+    expect(await screen.findByText(/haven't started any documents yet/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /change document/i }));
+
+    expect(await screen.findByText(/what do you need to draft/i)).toBeInTheDocument();
+  });
 });
