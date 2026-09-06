@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import LoginScreen from "@/components/LoginScreen";
 import NdaForm from "@/components/NdaForm";
 import NdaPreview from "@/components/NdaPreview";
 import { defaultNdaFormData, generateMarkdown, suggestedFilename } from "@/lib/nda";
 
 export default function Home() {
+  const [loggedIn, setLoggedIn] = useState(false);
   const [data, setData] = useState(defaultNdaFormData);
+
+  if (!loggedIn) {
+    return <LoginScreen onLogin={() => setLoggedIn(true)} />;
+  }
 
   function downloadMarkdown() {
     const blob = new Blob([generateMarkdown(data)], { type: "text/markdown;charset=utf-8" });
