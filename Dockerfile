@@ -10,6 +10,8 @@ WORKDIR /backend
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --locked --no-dev
 COPY backend/app/ ./app/
+COPY catalog.json /catalog.json
+COPY templates/ /templates/
 COPY --from=frontend-build /frontend/out/ ./static/
 
 EXPOSE 8000

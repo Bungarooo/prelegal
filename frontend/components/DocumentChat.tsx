@@ -2,22 +2,25 @@
 
 import { useState } from "react";
 import ChatBubble, { type ChatMessage } from "@/components/ChatBubble";
-import { mergeFields, type NdaFieldsUpdate, type NdaFormData } from "@/lib/nda";
+import type { GenericChatResult, GenericFields } from "@/lib/documents";
 
-const GREETING: ChatMessage = {
-  role: "assistant",
-  content:
-    "Hi! I'll help you put together your Mutual NDA. Let's start with the basics — what's the purpose of this agreement, and who are the two parties involved?",
-};
-
-export default function NdaChat({
-  data,
+export default function DocumentChat({
+  slug,
+  name,
+  fields,
   onChange,
 }: {
-  data: NdaFormData;
-  onChange: (data: NdaFormData) => void;
+  slug: string;
+  name: string;
+  fields: GenericFields;
+  onChange: (fields: GenericFields, markdown: string) => void;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: `Hi! I'll help you put together your ${name}. Tell me about the parties involved to get started.`,
+    },
+  ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,18 +37,18 @@ export default function NdaChat({
     setSending(true);
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`/api/documents/${slug}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, fields: data }),
+        body: JSON.stringify({ messages: nextMessages, fields }),
       });
       if (!response.ok) {
         setError("Something went wrong. Please try again.");
         return;
       }
-      const body: { reply: string; fields: NdaFieldsUpdate; complete: boolean } = await response.json();
+      const body: GenericChatResult = await response.json();
       setMessages([...nextMessages, { role: "assistant", content: body.reply }]);
-      onChange(mergeFields(data, body.fields));
+      onChange(body.fields, body.markdown);
     } catch {
       setError("Could not reach the server. Please try again.");
     } finally {
