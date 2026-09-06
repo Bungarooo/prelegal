@@ -27,8 +27,42 @@ The MNDA has these fields:
 
 Ask about one or two related fields at a time, in a natural, conversational way. Don't ask about
 fields that are already filled in unless the user brings them up. When the user gives you
-information, extract it into the `fields` output, leaving anything not mentioned as null.
-Keep replies brief and friendly."""
+information, extract it into the `fields` output, leaving anything not mentioned as null. Keep
+replies brief and friendly, acknowledging what the user just said."""
+
+COMPLETION_NOTICE = (
+    "The document is complete and ready to download! A couple of things I can't do for you: "
+    "both parties still need to sign and date the Cover Page by hand, and you may want a "
+    "lawyer to review the document before signing."
+)
+
+# Fields with no sensible default the user must supply before the document is usable.
+# (purpose/effectiveDate/term fields already start out with reasonable defaults.)
+REQUIRED_FIELD_PATHS = [
+    "party1.name",
+    "party1.title",
+    "party1.company",
+    "party1.noticeAddress",
+    "party2.name",
+    "party2.title",
+    "party2.company",
+    "party2.noticeAddress",
+    "governingLaw",
+    "jurisdiction",
+]
+
+FIELD_QUESTIONS = {
+    "party1.name": "What's Party 1's name?",
+    "party1.title": "What's Party 1's title?",
+    "party1.company": "What company is Party 1 with?",
+    "party1.noticeAddress": "What's the best notice address (email or postal) for Party 1?",
+    "party2.name": "What's Party 2's name?",
+    "party2.title": "What's Party 2's title?",
+    "party2.company": "What company is Party 2 with?",
+    "party2.noticeAddress": "What's the best notice address (email or postal) for Party 2?",
+    "governingLaw": "What state's law should govern this agreement?",
+    "jurisdiction": "What city or county and state should be the jurisdiction for any disputes?",
+}
 
 
 class PartyFields(BaseModel):
@@ -52,9 +86,19 @@ class NdaFieldsUpdate(BaseModel):
     modifications: str | None = None
 
 
-class ChatTurnResult(BaseModel):
+class ChatExtraction(BaseModel):
+    """What the LLM produces: an acknowledgment and any fields it could extract."""
+
     reply: str
     fields: NdaFieldsUpdate
+
+
+class ChatTurnResult(BaseModel):
+    """What the API returns: the LLM's extraction, plus a deterministic completion check."""
+
+    reply: str
+    fields: NdaFieldsUpdate
+    complete: bool
 
 
 class ChatMessage(BaseModel):
@@ -67,6 +111,35 @@ class ChatRequest(BaseModel):
     fields: dict
 
 
+def _get_path(data: dict, path: str) -> object:
+    value: object = data
+    for part in path.split("."):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(part)
+    return value
+
+
+def merge_fields(current: dict, update: NdaFieldsUpdate) -> dict:
+    """Applies a partial field update onto a dict of already-known fields."""
+    merged = dict(current)
+    for key, value in update.model_dump(exclude_none=True).items():
+        if key in ("party1", "party2") and isinstance(value, dict):
+            merged[key] = {**(merged.get(key) or {}), **value}
+        else:
+            merged[key] = value
+    return merged
+
+
+def next_missing_field_question(fields: dict) -> str | None:
+    """Returns a question for the first required field still missing, or None if complete."""
+    for path in REQUIRED_FIELD_PATHS:
+        value = _get_path(fields, path)
+        if not (isinstance(value, str) and value.strip()):
+            return FIELD_QUESTIONS[path]
+    return None
+
+
 @router.post("")
 def chat(request: ChatRequest) -> ChatTurnResult:
     messages = [
@@ -76,8 +149,19 @@ def chat(request: ChatRequest) -> ChatTurnResult:
     response = completion(
         model=MODEL,
         messages=messages,
-        response_format=ChatTurnResult,
+        response_format=ChatExtraction,
         reasoning_effort="low",
         extra_body=EXTRA_BODY,
     )
-    return ChatTurnResult.model_validate_json(response.choices[0].message.content)
+    extraction = ChatExtraction.model_validate_json(response.choices[0].message.content)
+
+    merged_fields = merge_fields(request.fields, extraction.fields)
+    question = next_missing_field_question(merged_fields)
+
+    reply = extraction.reply.strip()
+    if question is None:
+        reply = f"{reply}\n\n{COMPLETION_NOTICE}"
+    elif not reply.endswith("?"):
+        reply = f"{reply} {question}"
+
+    return ChatTurnResult(reply=reply, fields=extraction.fields, complete=question is None)

@@ -49,7 +49,7 @@ export default function NdaChat({
         setError("Something went wrong. Please try again.");
         return;
       }
-      const body: { reply: string; fields: NdaFieldsUpdate } = await response.json();
+      const body: { reply: string; fields: NdaFieldsUpdate; complete: boolean } = await response.json();
       setMessages([...nextMessages, { role: "assistant", content: body.reply }]);
       onChange(mergeFields(data, body.fields));
     } catch {
