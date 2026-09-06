@@ -48,6 +48,12 @@ dmypy.json
 # FastAPI / Alembic
 alembic.ini.bak
 
+# Ephemeral SQLite database (recreated on every container start)
+backend/data/
+
+# Frontend static export copied in at Docker build time
+backend/static/
+
 # Distribution / packaging
 *.manifest
 *.spec
