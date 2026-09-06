@@ -74,4 +74,15 @@ describe("Home", () => {
 
     expect(screen.getByText(/mutual nda creator/i)).toBeInTheDocument();
   });
+
+  it("returns to the login screen and clears the session on sign out", async () => {
+    sessionStorage.setItem("prelegal_username", "alice");
+    render(<Home />);
+    expect(screen.getByText(/mutual nda creator/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /sign out/i }));
+
+    expect(screen.getByRole("heading", { name: /log in to prelegal/i })).toBeInTheDocument();
+    expect(sessionStorage.getItem("prelegal_username")).toBeNull();
+  });
 });

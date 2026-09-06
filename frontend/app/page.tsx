@@ -20,6 +20,11 @@ export default function Home() {
     setUsername(loggedInUsername);
   }
 
+  function handleSignOut() {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    setUsername(null);
+  }
+
   if (!username) {
     return <LoginScreen onLogin={handleLogin} />;
   }
@@ -42,13 +47,22 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100">
-      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/80 px-6 py-4 backdrop-blur print:hidden">
-        <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
-          Mutual NDA Creator
-        </h1>
-        <p className="text-sm text-neutral-500">
-          Fill in the form and your Mutual Non-Disclosure Agreement is generated live below.
-        </p>
+      <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-200 bg-white/80 px-6 py-4 backdrop-blur print:hidden">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+            Mutual NDA Creator
+          </h1>
+          <p className="text-sm text-neutral-500">
+            Fill in the form and your Mutual Non-Disclosure Agreement is generated live below.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="shrink-0 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+        >
+          Sign Out
+        </button>
       </header>
 
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-[440px_1fr]">
